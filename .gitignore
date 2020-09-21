@@ -348,3 +348,4 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+/P4G_Song_Converter/P4G_Song_Converter/Properties/launchSettings.json
