@@ -29,6 +29,9 @@ namespace P4G_Song_Converter
 
         private static string currentDir = String.Empty;
         private static string encoderPath = String.Empty;
+        private static string checksumsFolderPath = String.Empty;
+        private static bool displayInfo = false;
+        private static ChecksumUtils checksum = new ChecksumUtils();
 
         static void Main(string[] args)
         {
@@ -71,10 +74,21 @@ namespace P4G_Song_Converter
         {
             currentDir = Directory.GetCurrentDirectory();
             encoderPath = $@"{currentDir}\xacttool_0.1\tools\AdpcmEncode.exe";
+            checksumsFolderPath = $@"{currentDir}\wave_checksums";
 
             if (!File.Exists(encoderPath))
             {
                 Console.WriteLine($"AdpcmEncode.exe could not be found!\nMissing: {encoderPath}");
+                return false;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(checksumsFolderPath);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Problem creating checksums directory!");
                 return false;
             }
 
@@ -84,6 +98,10 @@ namespace P4G_Song_Converter
         // encode wav to raw + txth
         private static void EncodeWave(string inputFilePath, string outputFilePath, long startSample, long endSample)
         {
+            // exit early if input wave has already been encoded to output file
+            if (!RequiresEncoding(inputFilePath, outputFilePath))
+                return;
+
             // file path to store temp encoded file (still has header)
             string tempFilePath = $@"{outputFilePath}.temp";
 
@@ -282,6 +300,87 @@ namespace P4G_Song_Converter
             else
             {
                 return sample;
+            }
+        }
+
+        // check if file needs to be encoded
+        private static bool RequiresEncoding(string infile, string outfile)
+        {
+            try
+            {
+                string infileChecksum = GetWaveSum(infile);
+
+                // already encoded file doesn't exist
+                if (!File.Exists(outfile))
+                {
+                    Console.WriteLine("Re-encoded doesn't exist! Creating one...");
+                    return true;
+                }
+
+                // checks if infile sum matches saved sum for that file
+                if (checksum.GetChecksumString(infile).Equals(infileChecksum))
+                {
+                    Console.WriteLine("Re-encoding not required!");
+                    return false;
+                }
+                else
+                {
+                    Console.WriteLine("File requires encoding!");
+                    WriteWaveSum(infile);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return true;
+            }
+        }
+
+        // get a wave files saved checksum, create one if missing
+        private static string GetWaveSum(string filePath)
+        {
+            string waveChecksumFile = $"{Path.GetFileName(filePath)}.music";
+            string checksumFilePath = $@"{checksumsFolderPath}\{waveChecksumFile}";
+
+            // check if a checksum file for song exists
+            if (!File.Exists(checksumFilePath))
+            {
+                WriteWaveSum(filePath);
+                return null;
+            }
+            else
+            {
+                try
+                {
+                    string savedSum = File.ReadAllText(checksumFilePath);
+                    return savedSum;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Problem reading wave file checksum!");
+                    Console.WriteLine(e);
+                    return null;
+                }
+            }
+        }
+
+        private static void WriteWaveSum(string filePath)
+        {
+            string waveChecksumFile = $"{Path.GetFileName(filePath)}.music";
+            string checksumFilePath = $@"{checksumsFolderPath}\{waveChecksumFile}";
+
+            // write a checksum file for song if missing
+            try
+            {
+                string fileSum = checksum.GetChecksumString(filePath);
+                File.WriteAllText(checksumFilePath, fileSum);
+                Console.WriteLine($"Checksum saved: {checksumFilePath}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Problem writing wave file checksum!");
+                Console.WriteLine(e);
             }
         }
     }
