@@ -194,7 +194,7 @@ namespace P4G_Song_Converter
                 return;
             }
 
-            //File.Delete(tempFilePath);
+            File.Delete(tempFilePath);
         }
 
         private static WaveProps GetWaveProps(string filePath)
@@ -313,19 +313,19 @@ namespace P4G_Song_Converter
                 // already encoded file doesn't exist
                 if (!File.Exists(outfile))
                 {
-                    Console.WriteLine("Re-encoded doesn't exist! Creating one...");
+                    Console.WriteLine("Re-encoded file doesn't exist!");
                     return true;
                 }
 
-                // checks if infile sum matches saved sum for that file
+                // checks if saved sum matches infile sum
                 if (checksum.GetChecksumString(infile).Equals(infileChecksum))
                 {
-                    Console.WriteLine("Re-encoding not required!");
+                    Console.WriteLine("Checksum match! Re-encoding not required!");
                     return false;
                 }
                 else
                 {
-                    Console.WriteLine("File requires encoding!");
+                    Console.WriteLine("Checksum mismatch! Re-encoding required!");
                     WriteWaveSum(infile);
                     return true;
                 }
@@ -375,7 +375,7 @@ namespace P4G_Song_Converter
             {
                 string fileSum = checksum.GetChecksumString(filePath);
                 File.WriteAllText(checksumFilePath, fileSum);
-                Console.WriteLine($"Checksum saved: {checksumFilePath}");
+                Console.WriteLine($"Saved wave checksum: {Path.GetFileName(filePath)}");
             }
             catch (Exception e)
             {
