@@ -7,7 +7,7 @@ namespace P4G_Song_Converter
 {
     class Program
     {
-        private struct WaveProps
+        public struct WaveProps
         {
             public string ChunkID { get; set; }
             public int ChunkSize { get; set; }
@@ -24,7 +24,7 @@ namespace P4G_Song_Converter
             public byte[] ExtraParams { get; set; }
             public string Subchunk2ID { get; set; }
             public int Subchunk2Size { get; set; }
-            public byte DataOffset { get; set; }
+            public long DataOffset { get; set; }
         }
 
         private static string currentDir = String.Empty;
@@ -32,6 +32,7 @@ namespace P4G_Song_Converter
         private static string checksumsFolderPath = String.Empty;
         private static bool displayInfo = false;
         private static ChecksumUtils checksum = new ChecksumUtils();
+        private static TxthHandler txthHandler = new TxthHandler();
 
         static void Main(string[] args)
         {
@@ -98,8 +99,10 @@ namespace P4G_Song_Converter
         // encode wav to raw + txth
         private static void EncodeWave(string inputFilePath, string outputFilePath, long startSample, long endSample)
         {
+            bool is
+
             // exit early if input wave has already been encoded to output file
-            if (!RequiresEncoding(inputFilePath, outputFilePath))
+            if (/*!RequiresEncoding(inputFilePath, outputFilePath)*/false)
                 return;
 
             // file path to store temp encoded file (still has header)
@@ -159,33 +162,13 @@ namespace P4G_Song_Converter
                 return;
             }
 
-            // build txth
-            StringBuilder txthBuilder = new StringBuilder();
-            txthBuilder.AppendLine($"num_samples = {numSamples}");
-            txthBuilder.AppendLine("codec = MSADPCM");
-            txthBuilder.AppendLine($"channels = {outputWaveProps.NumChannels}");
-            txthBuilder.AppendLine($"sample_rate = {outputWaveProps.SampleRate}");
-            txthBuilder.AppendLine($"interleave = {outputWaveProps.BlockAlign}");
-
-            // set txth loop points
-            if (startSample == 0 && endSample == 0)
-            {
-                // no loop points given, set loop points to song length
-                txthBuilder.AppendLine("loop_start_sample = 0");
-                txthBuilder.AppendLine($"loop_end_sample = {AlignToBlock(numSamples, samplesPerBlock)}");
-            }
-            else
-            {
-                // add loop points given
-                txthBuilder.AppendLine($"loop_start_sample = {AlignToBlock(startSample, samplesPerBlock)}");
-                txthBuilder.AppendLine($"loop_end_sample = {AlignToBlock(endSample, samplesPerBlock)}");
-            }
-
             // write raw and txth to file
             try
             {
+                // write raw file
                 File.WriteAllBytes($"{outputFilePath}", outDataChunk);
-                File.WriteAllText($"{outputFilePath}.txth", txthBuilder.ToString());
+                // write txth file
+                txthHandler.WriteTxthFile($"{outputFilePath}.txth", outputWaveProps, numSamples, startSample, endSample);
             }
             catch (Exception e)
             {
@@ -232,7 +215,7 @@ namespace P4G_Song_Converter
 
                     props.Subchunk2ID = Encoding.ASCII.GetString(reader.ReadBytes(4));
                     props.Subchunk2Size = reader.ReadInt32();
-                    props.DataOffset = (byte)reader.BaseStream.Position;
+                    props.DataOffset = reader.BaseStream.Position;
                 }
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -284,22 +267,6 @@ namespace P4G_Song_Converter
                 Console.WriteLine("Problem calculating samples!");
                 Console.WriteLine(e);
                 return 0;
-            }
-        }
-
-        private static long AlignToBlock(long sample, byte perBlock)
-        {
-            // check if sample given aligns
-            if (sample % perBlock != 0)
-            {
-                // align sample to block
-                byte adjustment = (byte)(sample % perBlock);
-                Console.WriteLine($"Aligning: {sample} to {sample - adjustment} (-{adjustment})");
-                return sample - adjustment;
-            }
-            else
-            {
-                return sample;
             }
         }
 
