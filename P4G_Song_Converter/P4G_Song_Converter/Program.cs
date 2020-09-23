@@ -36,16 +36,15 @@ namespace P4G_Song_Converter
 
         static int Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
             if (!Init())
             {
-                return 2;
+                return 1;
             }
 
             if (args.Length < 2)
             {
                 Console.WriteLine("Missing args! Usage: <inputfile>.wav <outputfile>.raw <loop start sample> <loop end sample>");
-                return 1;
+                return 2;
             }
 
             string inputFile = args[0];
@@ -64,7 +63,7 @@ namespace P4G_Song_Converter
                 {
                     Console.WriteLine("Problem parsing loop points!");
                     Console.WriteLine(e);
-                    return 1;
+                    return 2;
                 }
             }
 
@@ -73,7 +72,10 @@ namespace P4G_Song_Converter
             bool success = EncodeWave(inputFile, outputFile, startloopSample, endloopSample);
 
             if (!success)
-                return 1;
+            {
+                Console.WriteLine("Failed to encode wave!");
+                return 3;
+            }
 
             return 0;
         }
@@ -167,24 +169,29 @@ namespace P4G_Song_Converter
             catch (Exception e)
             {
                 // exit early if error reading data chunk
-                Console.WriteLine("Problem reading in data chunk of output!");
+                Console.WriteLine($"Problem reading in data chunk of output!");
                 Console.WriteLine(e);
                 return false;
             }
 
-            // write raw and txth to file
+
+            // write txth file
+            bool txthSuccess = txthHandler.WriteTxthFile($"{outputFilePath}.txth", outputWaveProps, numSamples, startSample, endSample);
+            if (!txthSuccess)
+                return false;
+
+            // write raw to file
             try
             {
                 // write raw file
                 File.WriteAllBytes($"{outputFilePath}", outDataChunk);
-                // write txth file
-                txthHandler.WriteTxthFile($"{outputFilePath}.txth", outputWaveProps, numSamples, startSample, endSample);
                 // delete temp file
                 File.Delete(tempFilePath);
+                Console.WriteLine("Wave to raw+txth success!");
             }
             catch (Exception e)
             {
-                Console.WriteLine("Problem writing raw or txth to file!");
+                Console.WriteLine("Problem writing raw to file!");
                 Console.WriteLine(e);
                 return false;
             }
@@ -230,28 +237,31 @@ namespace P4G_Song_Converter
                     props.DataOffset = reader.BaseStream.Position;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"File: {filePath}");
-                Console.ResetColor();
-                Console.WriteLine($"RIFF: {props.ChunkID}");
-                Console.WriteLine($"ChunkSize: {props.ChunkSize}");
-                Console.WriteLine($"Format: {props.Format}");
-                Console.WriteLine($"Subchunk1ID: {props.Subchunk1ID}");
-                Console.WriteLine($"Subchunk1Size: {props.Subchunk1Size}");
-                Console.WriteLine($"AudioFormat: {props.AudioFormat}");
-                Console.WriteLine($"Channels: {props.NumChannels}");
-                Console.WriteLine($"Sample Rate: {props.SampleRate}");
-                Console.WriteLine($"Byte Rate: {props.ByteRate}");
-                Console.WriteLine($"Block Align: {props.BlockAlign}");
-                if (props.ExtraParamsSize > 0)
+                if (displayInfo)
                 {
-                    Console.WriteLine($"ExtraParamsSize: {props.ExtraParamsSize}");
-                    Console.WriteLine($"ExtraParams: {string.Join(",", props.ExtraParams)}");
-                    Console.WriteLine($"Samples per Block: {props.ExtraParams[0]}");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"File: {filePath}");
+                    Console.ResetColor();
+                    Console.WriteLine($"RIFF: {props.ChunkID}");
+                    Console.WriteLine($"ChunkSize: {props.ChunkSize}");
+                    Console.WriteLine($"Format: {props.Format}");
+                    Console.WriteLine($"Subchunk1ID: {props.Subchunk1ID}");
+                    Console.WriteLine($"Subchunk1Size: {props.Subchunk1Size}");
+                    Console.WriteLine($"AudioFormat: {props.AudioFormat}");
+                    Console.WriteLine($"Channels: {props.NumChannels}");
+                    Console.WriteLine($"Sample Rate: {props.SampleRate}");
+                    Console.WriteLine($"Byte Rate: {props.ByteRate}");
+                    Console.WriteLine($"Block Align: {props.BlockAlign}");
+                    if (props.ExtraParamsSize > 0)
+                    {
+                        Console.WriteLine($"ExtraParamsSize: {props.ExtraParamsSize}");
+                        Console.WriteLine($"ExtraParams: {string.Join(",", props.ExtraParams)}");
+                        Console.WriteLine($"Samples per Block: {props.ExtraParams[0]}");
+                    }
+                    Console.WriteLine($"Bits Per Sample: {props.BitsPerSample}");
+                    Console.WriteLine($"Subchunk2ID: {props.Subchunk2ID}");
+                    Console.WriteLine($"Subchunk2Size: {props.Subchunk2Size}");
                 }
-                Console.WriteLine($"Bits Per Sample: {props.BitsPerSample}");
-                Console.WriteLine($"Subchunk2ID: {props.Subchunk2ID}");
-                Console.WriteLine($"Subchunk2Size: {props.Subchunk2Size}");
             }
             catch (Exception e)
             {
@@ -292,14 +302,14 @@ namespace P4G_Song_Converter
                 // already encoded file doesn't exist
                 if (!File.Exists(outfile))
                 {
-                    Console.WriteLine("Re-encoded file doesn't exist!");
+                    Console.WriteLine("Encoded file missing! Re-encoding required!");
                     return true;
                 }
 
                 // checks if saved sum matches infile sum
                 if (checksum.GetChecksumString(infile).Equals(infileChecksum))
                 {
-                    Console.WriteLine("Checksum match! Re-encoding not required!");
+                    Console.WriteLine("Checksum match! Re-encoding not required...");
                     return false;
                 }
                 else

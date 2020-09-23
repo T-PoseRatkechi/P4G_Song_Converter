@@ -7,7 +7,7 @@ namespace P4G_Song_Converter
 {
     class TxthHandler
     {
-        public void WriteTxthFile(string outputFilePath, Program.WaveProps wav, long numSamples, long startSample, long endSample)
+        public bool WriteTxthFile(string outputFilePath, Program.WaveProps wav, long numSamples, long startSample, long endSample)
         {
             // get samples per block from first byte of extra params
             byte samplesPerBlock = wav.ExtraParams[0];
@@ -19,6 +19,7 @@ namespace P4G_Song_Converter
             txthBuilder.AppendLine($"channels = {wav.NumChannels}");
             txthBuilder.AppendLine($"sample_rate = {wav.SampleRate}");
             txthBuilder.AppendLine($"interleave = {wav.BlockAlign}");
+            txthBuilder.AppendLine($"samples_per_block = {wav.ExtraParams[0]}");
 
             // set txth loop points
             if (startSample == 0 && endSample == 0)
@@ -38,12 +39,14 @@ namespace P4G_Song_Converter
             try
             {
                 File.WriteAllText(outputFilePath, txthBuilder.ToString());
+                Console.WriteLine("Created txth file.");
+                return true;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Problem writing txth to file!");
                 Console.WriteLine(e);
-                return;
+                return false;
             }
         }
 
@@ -52,7 +55,7 @@ namespace P4G_Song_Converter
             // exit early if original txth is missing (shouldn't happen but oh well)
             if (!File.Exists(outputFilePath))
             {
-                Console.WriteLine($"TXTH file missing! File: {outputFilePath}");
+                Console.WriteLine($"Expected txth file missing! File: {outputFilePath}");
                 return false;
             }
 
@@ -61,12 +64,14 @@ namespace P4G_Song_Converter
                 string[] originalTxthFile = File.ReadAllLines(outputFilePath);
                 StringBuilder txthBuilder = new StringBuilder();
 
+                byte samplesPerBlock = byte.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("samples_per_block")).Split(" = ")[1]);
+
                 foreach (string line in originalTxthFile)
                 {
                     if (line.StartsWith("loop_start_sample"))
-                        txthBuilder.AppendLine($"loop_start_sample = {loopStart}");
+                        txthBuilder.AppendLine($"loop_start_sample = {AlignToBlock(loopStart, samplesPerBlock)}");
                     else if (line.StartsWith("loop_end_sample"))
-                        txthBuilder.AppendLine($"loop_end_sample = {loopEnd}");
+                        txthBuilder.AppendLine($"loop_end_sample = {AlignToBlock(loopEnd, samplesPerBlock)}");
                     else
                         txthBuilder.AppendLine(line);
                 }
