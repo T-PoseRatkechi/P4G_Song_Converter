@@ -47,16 +47,40 @@ namespace P4G_Song_Converter
             }
         }
 
-        public void UpdateTxthFile(string outputFilePath)
+        public bool UpdateTxthFile(string outputFilePath, long loopStart, long loopEnd)
         {
             // exit early if original txth is missing (shouldn't happen but oh well)
             if (!File.Exists(outputFilePath))
             {
-                Console.WriteLine($"Original TXTH File Missing! File: {outputFilePath}");
-                return;
+                Console.WriteLine($"TXTH file missing! File: {outputFilePath}");
+                return false;
             }
 
+            try
+            {
+                string[] originalTxthFile = File.ReadAllLines(outputFilePath);
+                StringBuilder txthBuilder = new StringBuilder();
 
+                foreach (string line in originalTxthFile)
+                {
+                    if (line.StartsWith("loop_start_sample"))
+                        txthBuilder.AppendLine($"loop_start_sample = {loopStart}");
+                    else if (line.StartsWith("loop_end_sample"))
+                        txthBuilder.AppendLine($"loop_end_sample = {loopEnd}");
+                    else
+                        txthBuilder.AppendLine(line);
+                }
+
+                File.WriteAllText(outputFilePath, txthBuilder.ToString());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Problem updating txth file!");
+                Console.WriteLine(e);
+                return false;
+            }
+
+            return true;
         }
 
         private long AlignToBlock(long sample, byte perBlock)

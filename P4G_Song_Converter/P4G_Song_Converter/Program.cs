@@ -34,18 +34,18 @@ namespace P4G_Song_Converter
         private static ChecksumUtils checksum = new ChecksumUtils();
         private static TxthHandler txthHandler = new TxthHandler();
 
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             Console.WriteLine("Hello World!");
             if (!Init())
             {
-                return;
+                return 2;
             }
 
             if (args.Length < 2)
             {
-                Console.WriteLine("Missing args! Usage: <inputfile>.wav <outputfile>.raw startSample endSample");
-                return;
+                Console.WriteLine("Missing args! Usage: <inputfile>.wav <outputfile>.raw <loop start sample> <loop end sample>");
+                return 1;
             }
 
             string inputFile = args[0];
@@ -64,11 +64,18 @@ namespace P4G_Song_Converter
                 {
                     Console.WriteLine("Problem parsing loop points!");
                     Console.WriteLine(e);
+                    return 1;
                 }
             }
 
-            Console.WriteLine($"Input: {inputFile}\nOutput: {outputFile}\nStart Loop Sample: {startloopSample}\nEnd Loop Sample: {endloopSample}");
-            EncodeWave(inputFile, outputFile, startloopSample, endloopSample);
+            Console.WriteLine($"Input: {inputFile}\nOutput: {outputFile}\nLoop Start Sample: {startloopSample}\nLoop End Sample: {endloopSample}");
+
+            bool success = EncodeWave(inputFile, outputFile, startloopSample, endloopSample);
+
+            if (!success)
+                return 1;
+
+            return 0;
         }
 
         private static bool Init()
@@ -97,13 +104,18 @@ namespace P4G_Song_Converter
         }
 
         // encode wav to raw + txth
-        private static void EncodeWave(string inputFilePath, string outputFilePath, long startSample, long endSample)
+        private static bool EncodeWave(string inputFilePath, string outputFilePath, long startSample, long endSample)
         {
-            bool is
+            bool waveRequiresEncoding = RequiresEncoding(inputFilePath, outputFilePath);
 
-            // exit early if input wave has already been encoded to output file
-            if (/*!RequiresEncoding(inputFilePath, outputFilePath)*/false)
-                return;
+            // only update txth file if wave doesn't need to be encoded
+            if (!waveRequiresEncoding)
+            {
+                Console.WriteLine("Updating txth file!");
+                // store result of txth updated
+                bool txthUpdated = txthHandler.UpdateTxthFile($"{outputFilePath}.txth", startSample, endSample);
+                return txthUpdated;
+            }
 
             // file path to store temp encoded file (still has header)
             string tempFilePath = $@"{outputFilePath}.temp";
@@ -123,7 +135,7 @@ namespace P4G_Song_Converter
                 if (process.ExitCode != 0)
                 {
                     Console.WriteLine($"Problem with AdpcmEncode! Exit code: {process.ExitCode}");
-                    return;
+                    return false;
                 }
             }
             catch (Exception e)
@@ -131,7 +143,7 @@ namespace P4G_Song_Converter
                 // problem starting process, exit early
                 Console.WriteLine("Problem running AdpcmEncode!");
                 Console.WriteLine(e);
-                return;
+                return false;
             }
 
             // get props of wave files
@@ -139,8 +151,6 @@ namespace P4G_Song_Converter
             WaveProps outputWaveProps = GetWaveProps(tempFilePath);
             // get num samples from input wave
             int numSamples = GetNumSamples(inputWaveProps);
-            // get samples per block from output wave params
-            byte samplesPerBlock = outputWaveProps.ExtraParams[0];
 
             // array to store data chunk bytes
             byte[] outDataChunk = new byte[outputWaveProps.Subchunk2Size];
@@ -159,7 +169,7 @@ namespace P4G_Song_Converter
                 // exit early if error reading data chunk
                 Console.WriteLine("Problem reading in data chunk of output!");
                 Console.WriteLine(e);
-                return;
+                return false;
             }
 
             // write raw and txth to file
@@ -169,15 +179,17 @@ namespace P4G_Song_Converter
                 File.WriteAllBytes($"{outputFilePath}", outDataChunk);
                 // write txth file
                 txthHandler.WriteTxthFile($"{outputFilePath}.txth", outputWaveProps, numSamples, startSample, endSample);
+                // delete temp file
+                File.Delete(tempFilePath);
             }
             catch (Exception e)
             {
                 Console.WriteLine("Problem writing raw or txth to file!");
                 Console.WriteLine(e);
-                return;
+                return false;
             }
 
-            File.Delete(tempFilePath);
+            return true;
         }
 
         private static WaveProps GetWaveProps(string filePath)
