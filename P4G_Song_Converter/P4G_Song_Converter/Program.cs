@@ -77,6 +77,7 @@ namespace P4G_Song_Converter
                 return 3;
             }
 
+            Console.WriteLine("Wave to raw+txth success!");
             return 0;
         }
 
@@ -187,7 +188,6 @@ namespace P4G_Song_Converter
                 File.WriteAllBytes($"{outputFilePath}", outDataChunk);
                 // delete temp file
                 File.Delete(tempFilePath);
-                Console.WriteLine("Wave to raw+txth success!");
             }
             catch (Exception e)
             {
