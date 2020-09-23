@@ -56,8 +56,15 @@ namespace P4G_Song_Converter
             {
                 try
                 {
+                    // parse samples
                     startloopSample = long.Parse(args[2]);
                     endloopSample = long.Parse(args[3]);
+
+                    if (startloopSample < 0 || endloopSample < 0)
+                    {
+                        Console.WriteLine("Loop points must be a non-negative integer!");
+                        return 2;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -109,6 +116,7 @@ namespace P4G_Song_Converter
         // encode wav to raw + txth
         private static bool EncodeWave(string inputFilePath, string outputFilePath, long startSample, long endSample)
         {
+            // check if input file should be re-encoded
             bool waveRequiresEncoding = RequiresEncoding(inputFilePath, outputFilePath);
 
             // only update txth file if wave doesn't need to be encoded
@@ -149,11 +157,13 @@ namespace P4G_Song_Converter
                 return false;
             }
 
-            // get props of wave files
+            // get wave props of input file
             WaveProps inputWaveProps = GetWaveProps(inputFilePath);
-            WaveProps outputWaveProps = GetWaveProps(tempFilePath);
             // get num samples from input wave
             int numSamples = GetNumSamples(inputWaveProps);
+
+            // get wave props of temp file
+            WaveProps outputWaveProps = GetWaveProps(tempFilePath);
 
             // array to store data chunk bytes
             byte[] outDataChunk = new byte[outputWaveProps.Subchunk2Size];
@@ -174,7 +184,6 @@ namespace P4G_Song_Converter
                 Console.WriteLine(e);
                 return false;
             }
-
 
             // write txth file
             bool txthSuccess = txthHandler.WriteTxthFile($"{outputFilePath}.txth", outputWaveProps, numSamples, startSample, endSample);

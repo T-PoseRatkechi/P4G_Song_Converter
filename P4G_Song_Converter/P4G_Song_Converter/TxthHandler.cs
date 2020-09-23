@@ -30,9 +30,20 @@ namespace P4G_Song_Converter
             }
             else
             {
+                long finalStartSample = AlignToBlock(startSample, samplesPerBlock);
+                long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
+
+                // verify loop points are valid
+                if (!isValidLoop(numSamples, finalStartSample, finalEndSample))
+                {
+                    Console.WriteLine("Defaulting to full song loop!");
+                    finalStartSample = 0;
+                    finalEndSample = AlignToBlock(numSamples, samplesPerBlock);
+                }
+
                 // add loop points given
-                txthBuilder.AppendLine($"loop_start_sample = {AlignToBlock(startSample, samplesPerBlock)}");
-                txthBuilder.AppendLine($"loop_end_sample = {AlignToBlock(endSample, samplesPerBlock)}");
+                txthBuilder.AppendLine($"loop_start_sample = {finalStartSample}");
+                txthBuilder.AppendLine($"loop_end_sample = {finalEndSample}");
             }
 
             // write txth to file
@@ -50,7 +61,7 @@ namespace P4G_Song_Converter
             }
         }
 
-        public bool UpdateTxthFile(string outputFilePath, long loopStart, long loopEnd)
+        public bool UpdateTxthFile(string outputFilePath, long startSample, long endSample)
         {
             // exit early if original txth is missing (shouldn't happen but oh well)
             if (!File.Exists(outputFilePath))
@@ -64,14 +75,25 @@ namespace P4G_Song_Converter
                 string[] originalTxthFile = File.ReadAllLines(outputFilePath);
                 StringBuilder txthBuilder = new StringBuilder();
 
+                long numSamples = long.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("num_samples")).Split(" = ")[1]);
                 byte samplesPerBlock = byte.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("samples_per_block")).Split(" = ")[1]);
+                long finalStartSample = AlignToBlock(startSample, samplesPerBlock);
+                long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
+
+                // verify loop points are valid
+                if (!isValidLoop(numSamples, finalStartSample, finalEndSample))
+                {
+                    Console.WriteLine("Defaulting to full song loop!");
+                    finalStartSample = 0;
+                    finalEndSample = AlignToBlock(numSamples, samplesPerBlock);
+                }
 
                 foreach (string line in originalTxthFile)
                 {
                     if (line.StartsWith("loop_start_sample"))
-                        txthBuilder.AppendLine($"loop_start_sample = {AlignToBlock(loopStart, samplesPerBlock)}");
+                        txthBuilder.AppendLine($"loop_start_sample = {finalStartSample}");
                     else if (line.StartsWith("loop_end_sample"))
-                        txthBuilder.AppendLine($"loop_end_sample = {AlignToBlock(loopEnd, samplesPerBlock)}");
+                        txthBuilder.AppendLine($"loop_end_sample = {finalEndSample}");
                     else
                         txthBuilder.AppendLine(line);
                 }
@@ -86,6 +108,24 @@ namespace P4G_Song_Converter
             }
 
             return true;
+        }
+
+        private bool isValidLoop(long totalSamples, long startSample, long endSample)
+        {
+            if (startSample > totalSamples)
+            {
+                Console.WriteLine($"Loop start sample exceeds total samples: {startSample} > {totalSamples}");
+                return false;
+            }
+            else if (endSample > totalSamples)
+            {
+                Console.WriteLine($"Loop end sample exceeds total samples: {endSample} > {totalSamples}");
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
 
         private long AlignToBlock(long sample, byte perBlock)
