@@ -19,7 +19,7 @@ namespace P4G_Song_Converter
             txthBuilder.AppendLine($"channels = {wav.NumChannels}");
             txthBuilder.AppendLine($"sample_rate = {wav.SampleRate}");
             txthBuilder.AppendLine($"interleave = {wav.BlockAlign}");
-            txthBuilder.AppendLine($"samples_per_block = {wav.ExtraParams[0]}");
+            txthBuilder.AppendLine($"#samples_per_block = {wav.ExtraParams[0]}");
 
             // set txth loop points
             if (startSample == 0 && endSample == 0)
@@ -76,7 +76,7 @@ namespace P4G_Song_Converter
                 StringBuilder txthBuilder = new StringBuilder();
 
                 long numSamples = long.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("num_samples")).Split(" = ")[1]);
-                byte samplesPerBlock = byte.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("samples_per_block")).Split(" = ")[1]);
+                byte samplesPerBlock = byte.Parse(Array.Find<string>(originalTxthFile, s => s.StartsWith("#samples_per_block")).Split(" = ")[1]);
                 long finalStartSample = AlignToBlock(startSample, samplesPerBlock);
                 long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
 
