@@ -34,7 +34,7 @@ namespace P4G_Song_Converter
                 long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
 
                 // verify loop points are valid
-                if (!isValidLoop(numSamples, finalStartSample, finalEndSample))
+                if (!IsValidLoop(numSamples, finalStartSample, finalEndSample))
                 {
                     Console.WriteLine("Defaulting to full song loop!");
                     finalStartSample = 0;
@@ -81,7 +81,7 @@ namespace P4G_Song_Converter
                 long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
 
                 // verify loop points are valid
-                if (!isValidLoop(numSamples, finalStartSample, finalEndSample))
+                if (!IsValidLoop(numSamples, finalStartSample, finalEndSample))
                 {
                     Console.WriteLine("Defaulting to full song loop!");
                     finalStartSample = 0;
@@ -110,7 +110,7 @@ namespace P4G_Song_Converter
             return true;
         }
 
-        private bool isValidLoop(long totalSamples, long startSample, long endSample)
+        private bool IsValidLoop(long totalSamples, long startSample, long endSample)
         {
             if (startSample > totalSamples)
             {

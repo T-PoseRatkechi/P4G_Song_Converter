@@ -47,8 +47,8 @@ namespace P4G_Song_Converter
                 return 2;
             }
 
-            string inputFile = args[0];
-            string outputFile = args[1];
+            string inputFile = Path.GetFullPath(args[0]);
+            string outputFile = Path.GetFullPath(args[1]);
             long startloopSample = 0;
             long endloopSample = 0;
 
@@ -134,7 +134,7 @@ namespace P4G_Song_Converter
             ProcessStartInfo encodeInfo = new ProcessStartInfo
             {
                 FileName = encoderPath,
-                Arguments = $@"{inputFilePath} {tempFilePath}",
+                Arguments = $@"""{inputFilePath}"" ""{tempFilePath}""",
             };
 
             // encode file given
