@@ -66,6 +66,10 @@ namespace P4G_Song_Converter
                         return 2;
                     }
                 }
+                catch (OverflowException e)
+                {
+                    Console.WriteLine("A loop point was too large to be parsed! Defaulting to full song loop!");
+                }
                 catch (Exception e)
                 {
                     Console.WriteLine("Problem parsing loop points!");

@@ -80,8 +80,8 @@ namespace P4G_Song_Converter
                 long finalStartSample = AlignToBlock(startSample, samplesPerBlock);
                 long finalEndSample = AlignToBlock(endSample, samplesPerBlock);
 
-                // verify loop points are valid
-                if (!IsValidLoop(numSamples, finalStartSample, finalEndSample))
+                // default to full loop if loop points are invalid or both points are 0
+                if (!IsValidLoop(numSamples, finalStartSample, finalEndSample) || (startSample == 0 && endSample == 0))
                 {
                     Console.WriteLine("Defaulting to full song loop!");
                     finalStartSample = 0;
