@@ -165,6 +165,11 @@ namespace P4G_Song_Converter
             WaveProps inputWaveProps = GetWaveProps(inputFilePath);
             // get num samples from input wave
             int numSamples = GetNumSamples(inputWaveProps);
+            if (numSamples <= 0)
+            {
+                Console.WriteLine("Could not determine number of samples from input wave!");
+                return false;
+            }
 
             // get wave props of temp file
             WaveProps outputWaveProps = GetWaveProps(tempFilePath);
