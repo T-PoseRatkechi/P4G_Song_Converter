@@ -14,7 +14,7 @@ namespace P4G_Song_Converter
 
             // build txth
             StringBuilder txthBuilder = new StringBuilder();
-            txthBuilder.AppendLine($"num_samples = {numSamples}");
+            txthBuilder.AppendLine($"num_samples = {AlignToBlock(numSamples, samplesPerBlock)}");
             txthBuilder.AppendLine("codec = MSADPCM");
             txthBuilder.AppendLine($"channels = {wav.NumChannels}");
             txthBuilder.AppendLine($"sample_rate = {wav.SampleRate}");
